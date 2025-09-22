@@ -40,12 +40,13 @@ namespace MemoGenerator.Services
                 return $"{dt:MMMM} {d}{suffix} {dt:yyyy}";
             }
 
-            // colors
-            var labelHex     = HexOr(m.LabelColorHex,     "#137B3C");
-            var underlineHex = HexOr(m.UnderlineColorHex, "#137B3C");
+            // Colors
+            var labelHexEn   = "#1CA76A";                              // lighter (English)
+            var labelHexAr   = "#137B3C";                              // darker  (Arabic)
+            var underlineHex = HexOr(m.UnderlineColorHex, "#137B3C");  // keep darker underline
             var bodyHex      = "#000000";
 
-            // layout
+            // Layout
             const float FieldWidthPt      = 420f;
             const float ThroughWidthPt    = FieldWidthPt - 40f; // Through a bit narrower (no underline)
             const float MemoWidthPt       = 220f;               // left memo block width
@@ -53,15 +54,15 @@ namespace MemoGenerator.Services
             const float LineThickness     = 0.8f;
             const float FooterReservePt   = 84f;
 
-            // NEW: tighter knobs
-            const float TopClusterSpacing = 2f;   // was 4 → tighter
-            const float LabelBlockSpacing = 0f;   // internal label/value block spacing
-            const float UnderlinePadTop   = 0f;   // was 1–2
-            const float UnderlinePadBot   = 0f;   // was 1–2
+            // Spacing knobs
+            const float TopClusterSpacing = 2f;
+            const float LabelBlockSpacing = 0f;
+            const float UnderlinePadTop   = 0f;
+            const float UnderlinePadBot   = 0f;
             const float FieldLineHeight   = 1.28f;
-            const float GapAfterSubjectPt = 20f;  // explicit space between Subject and Body
+            const float GapAfterSubjectPt = 20f;
 
-            // text styles
+            // Text styles (Tajawal for both)
             var baseText   = TextStyle.Default.FontSize(11).FontFamily("Tajawal").FontColor(bodyHex);
             if (!string.IsNullOrWhiteSpace(m.FontFamilyLatin))
                 baseText = baseText.FontFamily(m.FontFamilyLatin);
@@ -70,11 +71,11 @@ namespace MemoGenerator.Services
             if (!string.IsNullOrWhiteSpace(m.FontFamilyArabic))
                 arabicText = arabicText.FontFamily(m.FontFamilyArabic);
 
-            // assets
+            // Assets
             byte[]? bannerBytes = (m.BannerImage is { Length: > 0 }) ? m.BannerImage : null;
             byte[]? footerBytes = (m.FooterImage is { Length: > 0 }) ? m.FooterImage : null;
 
-            // values
+            // Values
             string classificationValue = (m.Classification ?? "").Trim();
             string memoNumber = string.IsNullOrWhiteSpace(m.MemoNumber) ? $"M-{DateTime.UtcNow:yyyyMMdd-HHmmss}" : m.MemoNumber!.Trim();
             string dateText   = string.IsNullOrWhiteSpace(m.DateText)   ? OrdinalDate(DateTime.UtcNow)          : m.DateText!.Trim();
@@ -87,34 +88,32 @@ namespace MemoGenerator.Services
                     page.Margin(m.PageMarginPt);
                     page.DefaultTextStyle(baseText);
 
-                    // background footer art
+                    // Background footer art
                     page.Background().Element(bg =>
                     {
                         if (footerBytes != null)
                             bg.AlignBottom().Image(footerBytes).FitWidth();
                     });
 
-                    // header banner (first page)
+                    // Header banner
                     page.Header().ShowOnce().PaddingTop(3).Element(h =>
                     {
                         if (bannerBytes != null)
                             h.Image(bannerBytes).FitWidth();
                     });
 
-                    // content
+                    // Content
                     page.Content()
                         .PaddingBottom(FooterReservePt)
                         .Column(col =>
                     {
-                        col.Spacing(TopClusterSpacing); // tighter overall spacing
+                        col.Spacing(TopClusterSpacing);
 
-                        // --- Memo No. (left-aligned under header art, NO underline, smaller) ---
+                        // Memo No. (left-aligned, no underline, smaller)
                         col.Item().AlignLeft().Width(MemoWidthPt).Column(c =>
                         {
                             c.Spacing(LabelBlockSpacing);
-                            // English label only
-                            c.Item().Text(t => t.Span("Memo No.").SemiBold().FontColor(labelHex).FontSize(10));
-                            // value
+                            c.Item().Text(t => t.Span("Memo No.").SemiBold().FontColor(labelHexEn).FontSize(10));
                             c.Item().Text(t =>
                             {
                                 t.AlignLeft();
@@ -122,14 +121,15 @@ namespace MemoGenerator.Services
                             });
                         });
 
-                        // --- Date (centered; same style with underline; minimal padding) ---
+                        // Date (centered; underline; minimal padding)
                         col.Item().AlignCenter().Width(DateWidthPt).Column(c =>
                         {
                             c.Spacing(LabelBlockSpacing);
                             c.Item().Row(rr =>
                             {
-                                rr.RelativeItem().Text(t => t.Span("Date").SemiBold().FontColor(labelHex));
-                                rr.RelativeItem().AlignRight().Text(t => t.Span("التاريخ").SemiBold().FontColor(labelHex).Style(arabicText));
+                                rr.RelativeItem().Text(t => t.Span("Date").SemiBold().FontColor(labelHexEn));
+                                // Arabic: apply Arabic style first, then darker color
+                                rr.RelativeItem().AlignRight().Text(t => t.Span("التاريخ").Style(arabicText).SemiBold().FontColor(labelHexAr));
                             });
                             c.Item()
                              .PaddingTop(UnderlinePadTop)
@@ -142,7 +142,7 @@ namespace MemoGenerator.Services
                              });
                         });
 
-                        // helpers
+                        // Field helpers
                         void FieldBlock(string en, string ar, string? value)
                         {
                             col.Item().AlignCenter().Width(FieldWidthPt).Column(b =>
@@ -151,8 +151,8 @@ namespace MemoGenerator.Services
 
                                 b.Item().Row(r =>
                                 {
-                                    r.RelativeItem().Text(t => t.Span(en).SemiBold().FontColor(labelHex));
-                                    r.RelativeItem().AlignRight().Text(t => t.Span(ar).SemiBold().FontColor(labelHex).Style(arabicText));
+                                    r.RelativeItem().Text(t => t.Span(en).SemiBold().FontColor(labelHexEn));
+                                    r.RelativeItem().AlignRight().Text(t => t.Span(ar).Style(arabicText).SemiBold().FontColor(labelHexAr));
                                 });
 
                                 b.Item()
@@ -174,11 +174,11 @@ namespace MemoGenerator.Services
 
                                 b.Item().Row(r =>
                                 {
-                                    r.RelativeItem().Text(t => t.Span(en).SemiBold().FontColor(labelHex));
-                                    r.RelativeItem().AlignRight().Text(t => t.Span(ar).SemiBold().FontColor(labelHex).Style(arabicText));
+                                    r.RelativeItem().Text(t => t.Span(en).SemiBold().FontColor(labelHexEn));
+                                    r.RelativeItem().AlignRight().Text(t => t.Span(ar).Style(arabicText).SemiBold().FontColor(labelHexAr));
                                 });
 
-                                // no underline for Through
+                                // No underline for Through
                                 b.Item().Text(t =>
                                 {
                                     t.DefaultTextStyle(ds => ds.LineHeight(FieldLineHeight));
@@ -188,16 +188,16 @@ namespace MemoGenerator.Services
                             });
                         }
 
-                        // fields (tighter)
+                        // Fields
                         FieldBlock("To",       "إلى",     m.To);
                         ThroughBlock("Through","بواسطة", m.Through);
                         FieldBlock("From",     "من",      m.From);
                         FieldBlock("Subject",  "الموضوع", m.Subject);
 
-                        // --- explicit breathing room between last field and body ---
+                        // Space before body
                         col.Item().Height(GapAfterSubjectPt);
 
-                        // body (per-line LTR/RTL)
+                        // Body (per-line LTR/RTL)
                         col.Item()
                            .AlignCenter()
                            .Width(FieldWidthPt)
@@ -228,16 +228,19 @@ namespace MemoGenerator.Services
                         });
                     });
 
-                    // footer: compact classification line
-                    page.Footer().Column(f =>
+                    // Footer: classification on top of footer area (above art)
+                    page.Footer()
+                        .PaddingTop(2)
+                        .Column(f =>
                     {
                         if (!string.IsNullOrWhiteSpace(classificationValue))
                         {
-                            f.Item().PaddingBottom(6).Text(t =>
+                            f.Item().Text(t =>
                             {
                                 t.AlignCenter();
                                 t.Span("(");
-                                t.Span("Classification").SemiBold().FontColor(labelHex);
+                                // "Classification" is English → use lighter green
+                                t.Span("Classification").SemiBold().FontColor(labelHexEn);
                                 t.Span(": ");
                                 t.Span(classificationValue);
                                 t.Span(")");

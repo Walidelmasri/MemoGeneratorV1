@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MemoGenerator")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c8419086c3635a3a3994f5b4e2c4842bcf93ba3c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+88fb4b397f063e869e2c4b039c9f748bd8c8ffcd")]
 [assembly: System.Reflection.AssemblyProductAttribute("MemoGenerator")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MemoGenerator")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
