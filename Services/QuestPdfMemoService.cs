@@ -30,6 +30,7 @@ namespace MemoGenerator.Services
 
             static string HexOr(string? hex, string fallback)
                 => string.IsNullOrWhiteSpace(hex) ? fallback : hex!.Trim();
+
             static string OrdinalDate(DateTime dt)
             {
                 int d = dt.Day;
@@ -39,26 +40,41 @@ namespace MemoGenerator.Services
                 return $"{dt:MMMM} {d}{suffix} {dt:yyyy}";
             }
 
-            var labelHex = HexOr(m.LabelColorHex, "#137B3C");
+            // colors
+            var labelHex     = HexOr(m.LabelColorHex,     "#137B3C");
             var underlineHex = HexOr(m.UnderlineColorHex, "#137B3C");
-            var bodyHex = "#000000";
+            var bodyHex      = "#000000";
 
-            const float FieldWidthPt   = 420f;
-            const float ThroughWidthPt = FieldWidthPt - 40f; // slightly narrower Through
-            const float LineThickness  = 0.8f;
-            const float FooterReservePt = 84f;
+            // layout
+            const float FieldWidthPt      = 420f;
+            const float ThroughWidthPt    = FieldWidthPt - 40f; // Through a bit narrower (no underline)
+            const float MemoWidthPt       = 220f;               // left memo block width
+            const float DateWidthPt       = 260f;               // centered date block width
+            const float LineThickness     = 0.8f;
+            const float FooterReservePt   = 84f;
 
-var baseText   = TextStyle.Default.FontSize(11).FontFamily("Tajawal").FontColor(bodyHex);
+            // NEW: tighter knobs
+            const float TopClusterSpacing = 2f;   // was 4 → tighter
+            const float LabelBlockSpacing = 0f;   // internal label/value block spacing
+            const float UnderlinePadTop   = 0f;   // was 1–2
+            const float UnderlinePadBot   = 0f;   // was 1–2
+            const float FieldLineHeight   = 1.28f;
+            const float GapAfterSubjectPt = 20f;  // explicit space between Subject and Body
+
+            // text styles
+            var baseText   = TextStyle.Default.FontSize(11).FontFamily("Tajawal").FontColor(bodyHex);
             if (!string.IsNullOrWhiteSpace(m.FontFamilyLatin))
                 baseText = baseText.FontFamily(m.FontFamilyLatin);
 
-var arabicText = TextStyle.Default.FontSize(11).FontFamily("Tajawal").FontColor(bodyHex);
+            var arabicText = TextStyle.Default.FontSize(11).FontFamily("Tajawal").FontColor(bodyHex);
             if (!string.IsNullOrWhiteSpace(m.FontFamilyArabic))
                 arabicText = arabicText.FontFamily(m.FontFamilyArabic);
 
+            // assets
             byte[]? bannerBytes = (m.BannerImage is { Length: > 0 }) ? m.BannerImage : null;
             byte[]? footerBytes = (m.FooterImage is { Length: > 0 }) ? m.FooterImage : null;
 
+            // values
             string classificationValue = (m.Classification ?? "").Trim();
             string memoNumber = string.IsNullOrWhiteSpace(m.MemoNumber) ? $"M-{DateTime.UtcNow:yyyyMMdd-HHmmss}" : m.MemoNumber!.Trim();
             string dateText   = string.IsNullOrWhiteSpace(m.DateText)   ? OrdinalDate(DateTime.UtcNow)          : m.DateText!.Trim();
@@ -71,69 +87,82 @@ var arabicText = TextStyle.Default.FontSize(11).FontFamily("Tajawal").FontColor(
                     page.Margin(m.PageMarginPt);
                     page.DefaultTextStyle(baseText);
 
+                    // background footer art
                     page.Background().Element(bg =>
                     {
                         if (footerBytes != null)
                             bg.AlignBottom().Image(footerBytes).FitWidth();
                     });
 
-                    page.Header().ShowOnce().PaddingTop(6).Element(h =>
+                    // header banner (first page)
+                    page.Header().ShowOnce().PaddingTop(3).Element(h =>
                     {
                         if (bannerBytes != null)
                             h.Image(bannerBytes).FitWidth();
                     });
 
-                    page.Content().PaddingBottom(FooterReservePt).Column(col =>
+                    // content
+                    page.Content()
+                        .PaddingBottom(FooterReservePt)
+                        .Column(col =>
                     {
-                        col.Spacing(8);
+                        col.Spacing(TopClusterSpacing); // tighter overall spacing
 
-                        // Memo No. (left, smaller, no underline) + Date (right, with underline)
-                        col.Item().AlignCenter().Width(FieldWidthPt).Row(r =>
+                        // --- Memo No. (left-aligned under header art, NO underline, smaller) ---
+                        col.Item().AlignLeft().Width(MemoWidthPt).Column(c =>
                         {
-                            r.RelativeItem().Column(c =>
+                            c.Spacing(LabelBlockSpacing);
+                            // English label only
+                            c.Item().Text(t => t.Span("Memo No.").SemiBold().FontColor(labelHex).FontSize(10));
+                            // value
+                            c.Item().Text(t =>
                             {
-                                c.Spacing(1);
-                                c.Item().Row(rr =>
-                                {
-                                    rr.RelativeItem().Text(t => t.Span("Memo No.").SemiBold().FontColor(labelHex).FontSize(10));
-                                    rr.RelativeItem().AlignRight().Text(t => t.Span("رقم المذكرة").Style(arabicText).SemiBold().FontColor(labelHex).FontSize(10));
-                                });
-                                c.Item().Text(t =>
-                                {
-                                    t.AlignLeft();
-                                    t.Span(memoNumber).FontSize(10);
-                                });
-                            });
-
-                            r.ConstantItem(24).Text("");
-
-                            r.RelativeItem().Column(c =>
-                            {
-                                c.Spacing(2);
-                                c.Item().Row(rr =>
-                                {
-                                    rr.RelativeItem().Text(t => t.Span("Date").SemiBold().FontColor(labelHex));
-                                    rr.RelativeItem().AlignRight().Text(t => t.Span("التاريخ").SemiBold().FontColor(labelHex).Style(arabicText));
-                                });
-                                c.Item().PaddingTop(2).BorderBottom(LineThickness).BorderColor(underlineHex).PaddingBottom(2)
-                                 .Text(t => { t.AlignCenter(); t.Span(dateText); });
+                                t.AlignLeft();
+                                t.Span(memoNumber).FontSize(10);
                             });
                         });
 
-                        col.Item().Height(2);
+                        // --- Date (centered; same style with underline; minimal padding) ---
+                        col.Item().AlignCenter().Width(DateWidthPt).Column(c =>
+                        {
+                            c.Spacing(LabelBlockSpacing);
+                            c.Item().Row(rr =>
+                            {
+                                rr.RelativeItem().Text(t => t.Span("Date").SemiBold().FontColor(labelHex));
+                                rr.RelativeItem().AlignRight().Text(t => t.Span("التاريخ").SemiBold().FontColor(labelHex).Style(arabicText));
+                            });
+                            c.Item()
+                             .PaddingTop(UnderlinePadTop)
+                             .BorderBottom(LineThickness).BorderColor(underlineHex)
+                             .PaddingBottom(UnderlinePadBot)
+                             .Text(t =>
+                             {
+                                 t.AlignCenter();
+                                 t.Span(dateText);
+                             });
+                        });
 
+                        // helpers
                         void FieldBlock(string en, string ar, string? value)
                         {
                             col.Item().AlignCenter().Width(FieldWidthPt).Column(b =>
                             {
-                                b.Spacing(0);
+                                b.Spacing(LabelBlockSpacing);
+
                                 b.Item().Row(r =>
                                 {
                                     r.RelativeItem().Text(t => t.Span(en).SemiBold().FontColor(labelHex));
                                     r.RelativeItem().AlignRight().Text(t => t.Span(ar).SemiBold().FontColor(labelHex).Style(arabicText));
                                 });
-                                b.Item().BorderBottom(LineThickness).BorderColor(underlineHex)
-                                    .Text(t => { t.DefaultTextStyle(ds => ds.LineHeight(1.35f)); t.AlignCenter(); t.Span(value ?? ""); });
+
+                                b.Item()
+                                 .BorderBottom(LineThickness).BorderColor(underlineHex)
+                                 .Text(t =>
+                                 {
+                                     t.DefaultTextStyle(ds => ds.LineHeight(FieldLineHeight));
+                                     t.AlignCenter();
+                                     t.Span(value ?? "");
+                                 });
                             });
                         }
 
@@ -141,45 +170,65 @@ var arabicText = TextStyle.Default.FontSize(11).FontFamily("Tajawal").FontColor(
                         {
                             col.Item().AlignCenter().Width(ThroughWidthPt).Column(b =>
                             {
-                                b.Spacing(0);
+                                b.Spacing(LabelBlockSpacing);
+
                                 b.Item().Row(r =>
                                 {
                                     r.RelativeItem().Text(t => t.Span(en).SemiBold().FontColor(labelHex));
                                     r.RelativeItem().AlignRight().Text(t => t.Span(ar).SemiBold().FontColor(labelHex).Style(arabicText));
                                 });
-                                b.Item().Text(t => { t.DefaultTextStyle(ds => ds.LineHeight(1.35f)); t.AlignCenter(); t.Span(value ?? ""); });
+
+                                // no underline for Through
+                                b.Item().Text(t =>
+                                {
+                                    t.DefaultTextStyle(ds => ds.LineHeight(FieldLineHeight));
+                                    t.AlignCenter();
+                                    t.Span(value ?? "");
+                                });
                             });
                         }
 
-                        FieldBlock("To", "إلى", m.To);
-                        ThroughBlock("Through", "بواسطة", m.Through);
-                        FieldBlock("From", "من", m.From);
-                        FieldBlock("Subject", "الموضوع", m.Subject);
+                        // fields (tighter)
+                        FieldBlock("To",       "إلى",     m.To);
+                        ThroughBlock("Through","بواسطة", m.Through);
+                        FieldBlock("From",     "من",      m.From);
+                        FieldBlock("Subject",  "الموضوع", m.Subject);
 
-                        // Body: per-line alignment
-                        col.Item().AlignCenter().Width(FieldWidthPt).PaddingTop(10).Element(body =>
+                        // --- explicit breathing room between last field and body ---
+                        col.Item().Height(GapAfterSubjectPt);
+
+                        // body (per-line LTR/RTL)
+                        col.Item()
+                           .AlignCenter()
+                           .Width(FieldWidthPt)
+                           .Element(body =>
                         {
                             var text = (m.Body ?? "").Replace("\r\n", "\n");
-                            body.Column(c =>
+                            body.Column(c2 =>
                             {
                                 foreach (var raw in text.Split('\n'))
                                 {
                                     var line = raw.TrimEnd();
-                                    if (string.IsNullOrWhiteSpace(line)) { c.Item().Height(12); continue; }
+                                    if (string.IsNullOrWhiteSpace(line))
+                                    {
+                                        c2.Item().Height(10);
+                                        continue;
+                                    }
 
                                     if (ContainsArabic(line))
                                     {
-                                        c.Item().Text(t => { t.DefaultTextStyle(ds => ds.LineHeight(1.35f)); t.AlignRight(); t.Span(line).Style(arabicText); });
+                                        c2.Item().Text(t => { t.DefaultTextStyle(ds => ds.LineHeight(1.35f)); t.AlignRight(); t.Span(line).Style(arabicText); });
                                     }
                                     else
                                     {
-                                        c.Item().Text(t => { t.DefaultTextStyle(ds => ds.LineHeight(1.35f)); t.AlignLeft(); t.Span(line); });
+                                        c2.Item().Text(t => { t.DefaultTextStyle(ds => ds.LineHeight(1.35f)); t.AlignLeft(); t.Span(line); });
                                     }
                                 }
                             });
                         });
                     });
 
+                    // footer: compact classification line
                     page.Footer().Column(f =>
                     {
                         if (!string.IsNullOrWhiteSpace(classificationValue))
