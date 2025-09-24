@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "8NeRtThsuC2RB5Pp7LH2uvcmd3P/E0ZYQU5Gyxktt4o=",
+  "Hash": "TUKW/SuoFvrxeRYNI7s/suxOm1MS2UmDefCo/TKy6H8=",
   "Source": "MemoGenerator",
   "BasePath": "_content/MemoGenerator",
   "Mode": "Default",
@@ -1543,8 +1543,8 @@
       "RelatedAsset": "",
       "AssetTraitName": "",
       "AssetTraitValue": "",
-      "Fingerprint": "ktgo0tjqt5",
-      "Integrity": "KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y=",
+      "Fingerprint": "w0ohr8gxde",
+      "Integrity": "4O5h4yPpWox0f7D4X35+2FwGonLd31SaDWz72+mAR0c=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot/images/memo-banner.png"
@@ -3904,51 +3904,6 @@
       ]
     },
     {
-      "Route": "images/memo-banner.ktgo0tjqt5.png",
-      "AssetFile": "/Users/walidsalem/BADEA/MemoGenerator/MemoGenerator/wwwroot/images/memo-banner.png",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "281842"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "image/png"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Wed, 24 Sep 2025 07:34:32 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "ktgo0tjqt5"
-        },
-        {
-          "Name": "label",
-          "Value": "images/memo-banner.png"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y="
-        }
-      ]
-    },
-    {
       "Route": "images/memo-banner.png",
       "AssetFile": "/Users/walidsalem/BADEA/MemoGenerator/MemoGenerator/wwwroot/images/memo-banner.png",
       "Selectors": [],
@@ -3959,7 +3914,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "281842"
+          "Value": "274840"
         },
         {
           "Name": "Content-Type",
@@ -3967,11 +3922,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y=\""
+          "Value": "\"4O5h4yPpWox0f7D4X35+2FwGonLd31SaDWz72+mAR0c=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Wed, 24 Sep 2025 07:34:32 GMT"
+          "Value": "Wed, 24 Sep 2025 07:38:33 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -3981,7 +3936,52 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y="
+          "Value": "sha256-4O5h4yPpWox0f7D4X35+2FwGonLd31SaDWz72+mAR0c="
+        }
+      ]
+    },
+    {
+      "Route": "images/memo-banner.w0ohr8gxde.png",
+      "AssetFile": "/Users/walidsalem/BADEA/MemoGenerator/MemoGenerator/wwwroot/images/memo-banner.png",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "274840"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/png"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"4O5h4yPpWox0f7D4X35+2FwGonLd31SaDWz72+mAR0c=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 24 Sep 2025 07:38:33 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "w0ohr8gxde"
+        },
+        {
+          "Name": "label",
+          "Value": "images/memo-banner.png"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-4O5h4yPpWox0f7D4X35+2FwGonLd31SaDWz72+mAR0c="
         }
       ]
     },

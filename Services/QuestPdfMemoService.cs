@@ -26,6 +26,20 @@ namespace MemoGenerator.Services
             return false;
         }
 
+        // Explicit RTL on node or fallback to content detection
+        static bool IsRtlNode(HtmlNode node)
+        {
+            var dir = node.GetAttributeValue("dir", "").Trim().ToLowerInvariant();
+            if (dir == "rtl") return true;
+
+            var style = node.GetAttributeValue("style", "");
+            if (!string.IsNullOrEmpty(style) &&
+                style.IndexOf("direction:rtl", StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+
+            return ContainsArabic(node.InnerText);
+        }
+
         // ---- Read text-align from tag style/attribute ----
         static string? ReadTextAlign(HtmlNode node)
         {
@@ -44,7 +58,7 @@ namespace MemoGenerator.Services
             return alignAttr?.ToLowerInvariant();
         }
 
-        // ---- Inline renderer: supports <b>, <strong>, <i>, <em>, <u>, and <br> (blank line) ----
+        // ---- Inline renderer: <b>, <strong>, <i>, <em>, <u>, and <br> ----
         static void RenderInline(HtmlNode node, TextDescriptor t, TextStyle baseStyle, TextStyle arabicStyle)
         {
             if (node.NodeType == HtmlNodeType.Text)
@@ -60,11 +74,11 @@ namespace MemoGenerator.Services
 
             var tag = node.Name.ToLowerInvariant();
 
-            // Iterate children and apply transforms
             foreach (var child in node.ChildNodes)
             {
-                // handle explicit <br> as a real blank line in the PDF
-                if (child.NodeType == HtmlNodeType.Element && child.Name.Equals("br", StringComparison.OrdinalIgnoreCase))
+                // <br> -> blank line
+                if (child.NodeType == HtmlNodeType.Element &&
+                    child.Name.Equals("br", StringComparison.OrdinalIgnoreCase))
                 {
                     t.EmptyLine();
                     continue;
@@ -78,7 +92,6 @@ namespace MemoGenerator.Services
                 if (tag is "em" or "i")
                     style = style.Italic();
 
-                // underline applies to spans of text inside this tag
                 if (child.NodeType == HtmlNodeType.Text)
                 {
                     var txt = HtmlEntity.DeEntitize(child.InnerText);
@@ -99,19 +112,37 @@ namespace MemoGenerator.Services
         static void RenderParagraph(IContainer parent, HtmlNode block, float widthPt, TextStyle baseStyle, TextStyle arabicStyle)
         {
             var align = ReadTextAlign(block);
-            var paraText = block.InnerText ?? "";
-            var autoAlign = ContainsArabic(paraText) ? "right" : "left";
-            var alignToUse = string.IsNullOrWhiteSpace(align) ? autoAlign : align;
+            var rtl = IsRtlNode(block);
 
-            parent.AlignCenter().Width(widthPt).Text(t =>
+            // Default alignment if not set
+            var alignToUse = string.IsNullOrWhiteSpace(align)
+                ? (rtl ? "right" : "left")
+                : align;
+
+            // Width + (conditionally) RTL content flow
+            var container = parent.AlignCenter().Width(widthPt);
+            if (rtl) container = container.ContentFromRightToLeft();
+
+            container.Text(t =>
             {
                 t.DefaultTextStyle(ds => ds.LineHeight(1.35f));
+
+                // Direction-aware alignment (no chaining after Align*!)
                 switch (alignToUse)
                 {
-                    case "center": t.AlignCenter(); break;
-                    case "right": t.AlignRight(); break;
-                    // "justify" falls back to left (QuestPDF <=2024.2 has no AlignJustify)
-                    default: t.AlignLeft(); break;
+                    case "justify":
+                        t.Justify();       // requires a QuestPDF version that supports justification
+                        break;
+                    case "center":
+                        t.AlignCenter();
+                        break;
+                    case "right":
+                        t.AlignEnd();
+                        break;
+                    case "left":
+                    default:
+                        t.AlignStart();
+                        break;
                 }
 
                 foreach (var child in block.ChildNodes)
@@ -127,21 +158,22 @@ namespace MemoGenerator.Services
             int index = 1;
             foreach (var li in items)
             {
-                var text = li.InnerText ?? "";
                 var bullet = ordered ? $"{index}. " : "• ";
-                var align = ReadTextAlign(li);
-                var autoAlign = ContainsArabic(text) ? "right" : "left";
-                var alignToUse = string.IsNullOrWhiteSpace(align) ? autoAlign : align;
+                var rtl = IsRtlNode(li);
+                var align = ReadTextAlign(li) ?? (rtl ? "right" : "left");
 
-                parent.AlignCenter().Width(widthPt).Row(row =>
+                var rowContainer = parent.AlignCenter().Width(widthPt);
+                if (rtl) rowContainer = rowContainer.ContentFromRightToLeft();
+
+                rowContainer.Row(row =>
                 {
                     row.ConstantItem(18).Text(b =>
                     {
-                        switch (alignToUse)
+                        switch (align)
                         {
                             case "center": b.AlignCenter(); break;
-                            case "right": b.AlignRight(); break;
-                            default: b.AlignLeft(); break;
+                            case "right":  b.AlignEnd();    break;
+                            default:       b.AlignStart();  break;
                         }
                         b.Span(bullet);
                     });
@@ -149,11 +181,12 @@ namespace MemoGenerator.Services
                     row.RelativeItem().Text(t =>
                     {
                         t.DefaultTextStyle(ds => ds.LineHeight(1.35f));
-                        switch (alignToUse)
+                        switch (align)
                         {
-                            case "center": t.AlignCenter(); break;
-                            case "right": t.AlignRight(); break;
-                            default: t.AlignLeft(); break;
+                            case "justify": t.Justify();    break;
+                            case "center":  t.AlignCenter(); break;
+                            case "right":   t.AlignEnd();    break;
+                            default:        t.AlignStart();  break;
                         }
                         foreach (var child in li.ChildNodes)
                             RenderInline(child, t, baseStyle, arabicStyle);
@@ -181,28 +214,28 @@ namespace MemoGenerator.Services
                             continue;
                         }
 
-                        if (ContainsArabic(line))
+                        var rtl = ContainsArabic(line);
+                        if (rtl)
                         {
-                            t.AlignRight();
+                            t.AlignEnd();
                             t.Span(line).Style(arabicStyle);
                         }
                         else
                         {
-                            t.AlignLeft();
+                            t.AlignStart();
                             t.Span(line).Style(baseStyle);
                         }
                     }
-
                 });
                 return;
             }
 
-            // HTML path (Quill outputs <p>…</p> and empty lines as <p><br></p>)
+            // HTML path (Quill: <p>…</p>, blank lines as <p><br></p>)
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
 
             var body = doc.DocumentNode.SelectSingleNode("//body") ?? doc.DocumentNode;
-            var blocks = body.ChildNodes; // keep original order
+            var blocks = body.ChildNodes;
 
             container.Column(col =>
             {
@@ -210,28 +243,31 @@ namespace MemoGenerator.Services
                 {
                     if (node.NodeType == HtmlNodeType.Text && string.IsNullOrWhiteSpace(node.InnerText))
                         continue;
+                    if (node.NodeType != HtmlNodeType.Element)
+                        continue;
 
-                    if (node.NodeType == HtmlNodeType.Element)
+                    switch (node.Name.ToLowerInvariant())
                     {
-                        switch (node.Name.ToLowerInvariant())
-                        {
-                            case "p":
-                            case "div":
-                                RenderParagraph(col.Item(), node, widthPt, baseStyle, arabicStyle);
-                                break;
-                            case "br":
-                                col.Item().Height(8); // explicit blank line
-                                break;
-                            case "ul":
-                                RenderList(col.Item(), node, ordered: false, widthPt, baseStyle, arabicStyle);
-                                break;
-                            case "ol":
-                                RenderList(col.Item(), node, ordered: true, widthPt, baseStyle, arabicStyle);
-                                break;
-                            default:
-                                RenderParagraph(col.Item(), node, widthPt, baseStyle, arabicStyle);
-                                break;
-                        }
+                        case "p":
+                        case "div":
+                            RenderParagraph(col.Item(), node, widthPt, baseStyle, arabicStyle);
+                            break;
+
+                        case "br":
+                            col.Item().Height(8); // explicit blank line
+                            break;
+
+                        case "ul":
+                            RenderList(col.Item(), node, ordered: false, widthPt, baseStyle, arabicStyle);
+                            break;
+
+                        case "ol":
+                            RenderList(col.Item(), node, ordered: true, widthPt, baseStyle, arabicStyle);
+                            break;
+
+                        default:
+                            RenderParagraph(col.Item(), node, widthPt, baseStyle, arabicStyle);
+                            break;
                     }
                 }
             });
@@ -255,29 +291,29 @@ namespace MemoGenerator.Services
             }
 
             // Colors (English lighter, Arabic darker)
-            var labelHexEn = "#1CA76A";
-            var labelHexAr = "#137B3C";
+            var labelHexEn   = "#1CA76A";
+            var labelHexAr   = "#137B3C";
             var underlineHex = HexOr(m.UnderlineColorHex, "#137B3C");
-            var bodyHex = "#000000";
+            var bodyHex      = "#000000";
 
             // Layout
-            const float FieldWidthPt = 420f;
-            const float ThroughWidthPt = FieldWidthPt - 40f; // Through narrower, no underline
-            const float MemoWidthPt = 220f;               // left memo number block
-            const float DateWidthPt = 260f;               // centered date block
-            const float LineThickness = 0.8f;
-            const float FooterReservePt = 84f;
+            const float FieldWidthPt      = 420f;
+            const float ThroughWidthPt    = FieldWidthPt - 40f; // Through narrower, no underline
+            const float MemoWidthPt       = 220f;               // left memo number block
+            const float DateWidthPt       = 260f;               // centered date block
+            const float LineThickness     = 0.8f;
+            const float FooterReservePt   = 84f;
 
             // Spacing
             const float TopClusterSpacing = 2f;
             const float LabelBlockSpacing = 0f;
-            const float UnderlinePadTop = 0f;
-            const float UnderlinePadBot = 0f;
-            const float FieldLineHeight = 1.28f;
+            const float UnderlinePadTop   = 0f;
+            const float UnderlinePadBot   = 0f;
+            const float FieldLineHeight   = 1.28f;
             const float GapAfterSubjectPt = 20f;
 
             // Text styles (Tajawal everywhere)
-            var baseText = TextStyle.Default.FontSize(11).FontFamily("Tajawal").FontColor(bodyHex);
+            var baseText   = TextStyle.Default.FontSize(11).FontFamily("Tajawal").FontColor(bodyHex);
             if (!string.IsNullOrWhiteSpace(m.FontFamilyLatin))
                 baseText = baseText.FontFamily(m.FontFamilyLatin);
 
@@ -292,7 +328,7 @@ namespace MemoGenerator.Services
             // Values
             string classificationValue = (m.Classification ?? "").Trim();
             string memoNumber = string.IsNullOrWhiteSpace(m.MemoNumber) ? $"M-{DateTime.UtcNow:yyyyMMdd-HHmmss}" : m.MemoNumber!.Trim();
-            string dateText = string.IsNullOrWhiteSpace(m.DateText) ? OrdinalDate(DateTime.UtcNow) : m.DateText!.Trim();
+            string dateText   = string.IsNullOrWhiteSpace(m.DateText)   ? OrdinalDate(DateTime.UtcNow)          : m.DateText!.Trim();
 
             var pdf = Document.Create(doc =>
             {
@@ -328,7 +364,11 @@ namespace MemoGenerator.Services
                         {
                             c.Spacing(LabelBlockSpacing);
                             c.Item().Text(t => t.Span("Memo No.").SemiBold().FontColor(labelHexEn).FontSize(10));
-                            c.Item().Text(t => { t.AlignLeft(); t.Span(memoNumber).FontSize(10); });
+                            c.Item().Text(t =>
+                            {
+                                t.AlignLeft();
+                                t.Span(memoNumber).FontSize(10);
+                            });
                         });
 
                         // Date (centered; underline)
@@ -344,7 +384,11 @@ namespace MemoGenerator.Services
                              .PaddingTop(UnderlinePadTop)
                              .BorderBottom(LineThickness).BorderColor(underlineHex)
                              .PaddingBottom(UnderlinePadBot)
-                             .Text(t => { t.AlignCenter(); t.Span(dateText); });
+                             .Text(t =>
+                             {
+                                 t.AlignCenter();
+                                 t.Span(dateText);
+                             });
                         });
 
                         // Field helpers
@@ -353,18 +397,21 @@ namespace MemoGenerator.Services
                             col.Item().AlignCenter().Width(FieldWidthPt).Column(b =>
                             {
                                 b.Spacing(LabelBlockSpacing);
+
                                 b.Item().Row(r =>
                                 {
                                     r.RelativeItem().Text(t => t.Span(en).SemiBold().FontColor(labelHexEn));
                                     r.RelativeItem().AlignRight().Text(t => t.Span(ar).Style(arabicText).SemiBold().FontColor(labelHexAr));
                                 });
-                                b.Item().BorderBottom(LineThickness).BorderColor(underlineHex)
-                                   .Text(t =>
-                                   {
-                                       t.DefaultTextStyle(ds => ds.LineHeight(FieldLineHeight));
-                                       t.AlignCenter();
-                                       t.Span(value ?? "");
-                                   });
+
+                                b.Item()
+                                 .BorderBottom(LineThickness).BorderColor(underlineHex)
+                                 .Text(t =>
+                                 {
+                                     t.DefaultTextStyle(ds => ds.LineHeight(FieldLineHeight));
+                                     t.AlignCenter();
+                                     t.Span(value ?? "");
+                                 });
                             });
                         }
 
@@ -373,11 +420,13 @@ namespace MemoGenerator.Services
                             col.Item().AlignCenter().Width(ThroughWidthPt).Column(b =>
                             {
                                 b.Spacing(LabelBlockSpacing);
+
                                 b.Item().Row(r =>
                                 {
                                     r.RelativeItem().Text(t => t.Span(en).SemiBold().FontColor(labelHexEn));
                                     r.RelativeItem().AlignRight().Text(t => t.Span(ar).Style(arabicText).SemiBold().FontColor(labelHexAr));
                                 });
+
                                 // no underline
                                 b.Item().Text(t =>
                                 {
@@ -389,15 +438,15 @@ namespace MemoGenerator.Services
                         }
 
                         // Fields
-                        FieldBlock("To", "إلى", m.To);
-                        ThroughBlock("Through", "بواسطة", m.Through);
-                        FieldBlock("From", "من", m.From);
-                        FieldBlock("Subject", "الموضوع", m.Subject);
+                        FieldBlock("To",       "إلى",     m.To);
+                        ThroughBlock("Through","بواسطة", m.Through);
+                        FieldBlock("From",     "من",      m.From);
+                        FieldBlock("Subject",  "الموضوع", m.Subject);
 
                         // Gap before body
                         col.Item().Height(GapAfterSubjectPt);
 
-                        // Body: render sanitized HTML (preserve blank lines)
+                        // Body: HTML (preserve blank lines + RTL + justify)
                         col.Item()
                            .AlignCenter()
                            .Width(FieldWidthPt)

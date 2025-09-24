@@ -1,11 +1,15 @@
 @model MemoGenerator.ViewModels.MemoCreateVm
 @{
-    ViewData["Title"] = "Create Memo PDF";
+  ViewData["Title"] = "Create Memo PDF";
 }
 
 @section PageHeader {
-    <style>.page-hero{background-image:url('@Url.Content("~/images/pic1.jpg")');}</style>
-    <div class="page-hero-content"><h1 class="page-title">Create Memo PDF</h1></div>
+  <style>
+    .page-hero { background-image: url('@Url.Content("~/images/pic1.jpg")'); }
+  </style>
+  <div class="page-hero-content">
+    <h1 class="page-title">Create Memo PDF</h1>
+  </div>
 }
 
 <div class="with-rails">
@@ -52,7 +56,7 @@
             <span asp-validation-for="Subject" class="text-danger" data-valmsg-for="Subject"></span>
           </div>
 
-          <!-- Body -->
+          <!-- Body (Quill) -->
           <div class="col-12">
             <label class="form-label">Body</label>
 
@@ -69,6 +73,8 @@
                 </select>
                 <button class="ql-list" value="bullet"></button>
                 <button class="ql-list" value="ordered"></button>
+                <!-- Direction (built-in RTL toggle) -->
+                <button class="ql-direction" value="rtl" title="RTL"></button>
               </div>
               <div id="q-editor"></div>
             </div>
@@ -92,18 +98,18 @@
   <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
 
   <style>
-    /* Keep editor inside the card and comfortable to type in */
+    /* Editor look & feel inside the card */
     .quill-wrap .ql-toolbar.ql-snow,
     .quill-wrap .ql-container.ql-snow { border:1px solid #e5e7eb; }
     .quill-wrap .ql-toolbar.ql-snow   { border-radius:10px 10px 0 0; }
     .quill-wrap .ql-container.ql-snow {
       border-top:0; border-radius:0 0 10px 10px;
-      min-height: 320px;           /* container height */
+      min-height: 320px;
     }
-    .quill-wrap .ql-editor { min-height: 300px; }  /* content height */
-    .quill-wrap .ql-editor.ql-blank::before { color:#9aa3ab; } /* placeholder tint */
+    .quill-wrap .ql-editor { min-height: 300px; }
+    .quill-wrap .ql-editor.ql-blank::before { color:#9aa3ab; }
 
-    /* Visual invalid state similar to Bootstrap */
+    /* Bootstrap-like invalid highlight */
     .is-invalid.ql-container,
     .quill-wrap .is-invalid { border-color:#dc3545 !important; }
   </style>
@@ -118,16 +124,15 @@
 
     // Hidden textarea (what MVC posts)
     const bodyField = document.getElementById('Body');
-
-    // Load existing HTML (if any) into the editor
     if (bodyField.value) quill.clipboard.dangerouslyPasteHTML(bodyField.value);
 
-    // Convert Quill alignment classes to inline styles so the PDF respects them
+    // Normalize Quill output: convert alignment classes to inline styles;
+    // preserve RTL by setting text-align:right when .ql-direction-rtl is present.
     function normalizeQuillHtml(html) {
       const wrap = document.createElement('div');
       wrap.innerHTML = html;
 
-      // turn .ql-align-* into inline text-align
+      // align -> inline CSS
       wrap.querySelectorAll('.ql-align-center, .ql-align-right, .ql-align-justify').forEach(el => {
         if (el.classList.contains('ql-align-center'))  el.style.textAlign = 'center';
         if (el.classList.contains('ql-align-right'))   el.style.textAlign = 'right';
@@ -135,14 +140,19 @@
         el.classList.remove('ql-align-center','ql-align-right','ql-align-justify');
       });
 
-      // keep blank lines as <p><br></p> (Quill default) so PDF shows spacing
+      // direction -> ensure RTL lines default to right alignment
+      wrap.querySelectorAll('.ql-direction-rtl').forEach(el => {
+        if (!el.style.textAlign) el.style.textAlign = 'right';
+        el.classList.remove('ql-direction-rtl');
+      });
+
       return wrap.innerHTML;
     }
 
-    // Simple client-side gate (no model changes)
+    // Client-side “required” checks (no model changes)
     (function () {
-      const form   = document.getElementById('memoForm');
-      const qRoot  = document.getElementById('q-editor');
+      const form  = document.getElementById('memoForm');
+      const qRoot = document.getElementById('q-editor');
 
       const msgSpan = name => document.querySelector('[data-valmsg-for="' + name + '"]');
       const byName  = name => document.querySelector('[name="' + name + '"]');
@@ -157,29 +167,28 @@
       }
 
       form.addEventListener('submit', function (e) {
-        // push normalized HTML into the hidden field
+        // Put normalized HTML into hidden field for server/PDF
         bodyField.value = normalizeQuillHtml(quill.root.innerHTML);
 
         let errors = 0;
-
-        const toEl   = byName('To');
-        const fromEl = byName('From');
-        const subEl  = byName('Subject');
-        const clsEl  = byName('Classification');
+        const toEl    = byName('To');
+        const fromEl  = byName('From');
+        const subEl   = byName('Subject');
+        const clsEl   = byName('Classification');
         const bodyTxt = quill.getText().replace(/\s+/g, '').trim(); // true empty?
 
-        // clear previous
+        // Clear previous
         clearErr(toEl,   msgSpan('To'));
         clearErr(fromEl, msgSpan('From'));
         clearErr(subEl,  msgSpan('Subject'));
         clearErr(clsEl,  msgSpan('Classification'));
         qRoot.classList.remove('is-invalid'); clearErr(null, msgSpan('Body'));
 
-        // checks
-        if (!toEl.value.trim())   { setErr(toEl,   msgSpan('To'),           'Required'); errors++; }
-        if (!fromEl.value.trim()) { setErr(fromEl, msgSpan('From'),         'Required'); errors++; }
-        if (!subEl.value.trim())  { setErr(subEl,  msgSpan('Subject'),      'Required'); errors++; }
-        if (!clsEl.value.trim())  { setErr(clsEl,  msgSpan('Classification'),'Required'); errors++; }
+        // Block when empty
+        if (!toEl.value.trim())   { setErr(toEl,   msgSpan('To'),            'Required'); errors++; }
+        if (!fromEl.value.trim()) { setErr(fromEl, msgSpan('From'),          'Required'); errors++; }
+        if (!subEl.value.trim())  { setErr(subEl,  msgSpan('Subject'),       'Required'); errors++; }
+        if (!clsEl.value.trim())  { setErr(clsEl,  msgSpan('Classification'), 'Required'); errors++; }
         if (!bodyTxt.length)      { qRoot.classList.add('is-invalid'); setErr(null, msgSpan('Body'), 'Body cannot be empty'); errors++; }
 
         if (errors) {
