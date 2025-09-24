@@ -140,3 +140,4 @@
 /Users/walidsalem/BADEA/MemoGenerator/MemoGenerator/obj/Debug/net9.0/MemoGenerator.pdb
 /Users/walidsalem/BADEA/MemoGenerator/MemoGenerator/obj/Debug/net9.0/MemoGenerator.genruntimeconfig.cache
 /Users/walidsalem/BADEA/MemoGenerator/MemoGenerator/obj/Debug/net9.0/ref/MemoGenerator.dll
+/Users/walidsalem/BADEA/MemoGenerator/MemoGenerator/bin/Debug/net9.0/HtmlAgilityPack.dll

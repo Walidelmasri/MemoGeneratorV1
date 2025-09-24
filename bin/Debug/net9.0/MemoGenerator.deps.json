@@ -8,10 +8,19 @@
     ".NETCoreApp,Version=v9.0": {
       "MemoGenerator/1.0.0": {
         "dependencies": {
+          "HtmlAgilityPack": "1.12.3",
           "QuestPDF": "2025.7.1"
         },
         "runtime": {
           "MemoGenerator.dll": {}
+        }
+      },
+      "HtmlAgilityPack/1.12.3": {
+        "runtime": {
+          "lib/net7.0/HtmlAgilityPack.dll": {
+            "assemblyVersion": "1.12.3.0",
+            "fileVersion": "1.12.3.0"
+          }
         }
       },
       "QuestPDF/2025.7.1": {
@@ -141,6 +150,13 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
+    },
+    "HtmlAgilityPack/1.12.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-NyckYLSQBI5fB9YH5XN94EGfidD5FgaKnfmGqApKQYBaf3fFmv9KGodl5kvUZg/QLz+/M4rE7vwUig25eA8PqQ==",
+      "path": "htmlagilitypack/1.12.3",
+      "hashPath": "htmlagilitypack.1.12.3.nupkg.sha512"
     },
     "QuestPDF/2025.7.1": {
       "type": "package",

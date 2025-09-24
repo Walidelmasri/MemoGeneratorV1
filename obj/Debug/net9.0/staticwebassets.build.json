@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "ZBIB7RMjs+SJ0jy8W1lVVp2nHJRqJi60u+LugTkDLYs=",
+  "Hash": "8NeRtThsuC2RB5Pp7LH2uvcmd3P/E0ZYQU5Gyxktt4o=",
   "Source": "MemoGenerator",
   "BasePath": "_content/MemoGenerator",
   "Mode": "Default",
@@ -1543,8 +1543,8 @@
       "RelatedAsset": "",
       "AssetTraitName": "",
       "AssetTraitValue": "",
-      "Fingerprint": "zlpxror68w",
-      "Integrity": "54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q=",
+      "Fingerprint": "ktgo0tjqt5",
+      "Integrity": "KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot/images/memo-banner.png"
@@ -3904,6 +3904,51 @@
       ]
     },
     {
+      "Route": "images/memo-banner.ktgo0tjqt5.png",
+      "AssetFile": "/Users/walidsalem/BADEA/MemoGenerator/MemoGenerator/wwwroot/images/memo-banner.png",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "281842"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/png"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 24 Sep 2025 07:34:32 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "ktgo0tjqt5"
+        },
+        {
+          "Name": "label",
+          "Value": "images/memo-banner.png"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y="
+        }
+      ]
+    },
+    {
       "Route": "images/memo-banner.png",
       "AssetFile": "/Users/walidsalem/BADEA/MemoGenerator/MemoGenerator/wwwroot/images/memo-banner.png",
       "Selectors": [],
@@ -3914,7 +3959,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "348946"
+          "Value": "281842"
         },
         {
           "Name": "Content-Type",
@@ -3922,11 +3967,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q=\""
+          "Value": "\"KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sun, 21 Sep 2025 09:16:12 GMT"
+          "Value": "Wed, 24 Sep 2025 07:34:32 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -3936,52 +3981,7 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q="
-        }
-      ]
-    },
-    {
-      "Route": "images/memo-banner.zlpxror68w.png",
-      "AssetFile": "/Users/walidsalem/BADEA/MemoGenerator/MemoGenerator/wwwroot/images/memo-banner.png",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "348946"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "image/png"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Sun, 21 Sep 2025 09:16:12 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "zlpxror68w"
-        },
-        {
-          "Name": "label",
-          "Value": "images/memo-banner.png"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q="
+          "Value": "sha256-KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y="
         }
       ]
     },

@@ -120,8 +120,8 @@
       <RelatedAsset></RelatedAsset>
       <AssetTraitName></AssetTraitName>
       <AssetTraitValue></AssetTraitValue>
-      <Fingerprint>zlpxror68w</Fingerprint>
-      <Integrity>54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q=</Integrity>
+      <Fingerprint>ktgo0tjqt5</Fingerprint>
+      <Integrity>KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y=</Integrity>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <OriginalItemSpec>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\images\memo-banner.png'))</OriginalItemSpec>

@@ -4,67 +4,190 @@
 }
 
 @section PageHeader {
-    <style>
-        .page-hero { background-image: url('@Url.Content("~/images/pic1.jpg")'); }
-    </style>
-    <div class="page-hero-content">
-        <h1 class="page-title">Create Memo PDF</h1>
-    </div>
+    <style>.page-hero{background-image:url('@Url.Content("~/images/pic1.jpg")');}</style>
+    <div class="page-hero-content"><h1 class="page-title">Create Memo PDF</h1></div>
 }
 
 <div class="with-rails">
-  <div class="bg-white border rounded-3 p-3 p-md-4 shadow-sm">
-    <form asp-controller="Memo" asp-action="Create" method="post" novalidate>
-      @Html.AntiForgeryToken()
+  <div class="container py-4">
+    <div class="bg-white border rounded-3 p-3 p-md-4 shadow-sm mb-4">
+      <form id="memoForm" asp-controller="Memo" asp-action="Create" method="post" novalidate>
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
 
-      <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+        <div class="row g-3 mt-0">
+          <!-- Row 1 -->
+          <div class="col-md-6">
+            <label class="form-label">To</label>
+            <input asp-for="To" class="form-control" />
+            <span asp-validation-for="To" class="text-danger" data-valmsg-for="To"></span>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Through / <span dir="rtl">بواسطة</span></label>
+            <input asp-for="Through" class="form-control" />
+            <span asp-validation-for="Through" class="text-danger" data-valmsg-for="Through"></span>
+          </div>
 
-      <div class="row g-3 mt-0">
-        <div class="col-md-6">
-          <label class="form-label">To</label>
-          <input asp-for="To" class="form-control" />
-          <span asp-validation-for="To" class="text-danger"></span>
+          <!-- Row 2 -->
+          <div class="col-md-6">
+            <label class="form-label">From</label>
+            <input asp-for="From" class="form-control" />
+            <span asp-validation-for="From" class="text-danger" data-valmsg-for="From"></span>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Memo Type (Classification)</label>
+            <select asp-for="Classification" class="form-select">
+              <option value="">-- Select Type --</option>
+              <option value="Confidential">Confidential</option>
+              <option value="For Internal Use">For Internal Use</option>
+              <option value="General">General</option>
+            </select>
+            <span asp-validation-for="Classification" class="text-danger" data-valmsg-for="Classification"></span>
+          </div>
+
+          <!-- Subject -->
+          <div class="col-12">
+            <label class="form-label">Subject</label>
+            <input asp-for="Subject" class="form-control" />
+            <span asp-validation-for="Subject" class="text-danger" data-valmsg-for="Subject"></span>
+          </div>
+
+          <!-- Body -->
+          <div class="col-12">
+            <label class="form-label">Body</label>
+
+            <div class="quill-wrap mb-3">
+              <div id="q-toolbar" class="mb-2">
+                <button class="ql-bold"></button>
+                <button class="ql-italic"></button>
+                <button class="ql-underline"></button>
+                <select class="ql-align">
+                  <option selected></option>
+                  <option value="center"></option>
+                  <option value="right"></option>
+                  <option value="justify"></option>
+                </select>
+                <button class="ql-list" value="bullet"></button>
+                <button class="ql-list" value="ordered"></button>
+              </div>
+              <div id="q-editor"></div>
+            </div>
+
+            <!-- Hidden field MVC posts -->
+            <textarea asp-for="Body" id="Body" class="d-none"></textarea>
+            <span asp-validation-for="Body" class="text-danger" data-valmsg-for="Body"></span>
+          </div>
         </div>
 
-        <div class="col-md-6">
-          <label class="form-label">Through / <span dir="rtl">بواسطة</span></label>
-          <input asp-for="Through" class="form-control" />
-          <span asp-validation-for="Through" class="text-danger"></span>
+        <div class="mt-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Generate PDF</button>
         </div>
-
-        <div class="col-md-6">
-          <label class="form-label">From</label>
-          <input asp-for="From" class="form-control" />
-          <span asp-validation-for="From" class="text-danger"></span>
-        </div>
-
-        <div class="col-12">
-          <label class="form-label">Subject</label>
-          <input asp-for="Subject" class="form-control" />
-          <span asp-validation-for="Subject" class="text-danger"></span>
-        </div>
-
-        <div class="col-12">
-          <label class="form-label">Body</label>
-          <textarea asp-for="Body" class="form-control" rows="12"></textarea>
-          <span asp-validation-for="Body" class="text-danger"></span>
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label">Memo Type (Classification)</label>
-          <select asp-for="Classification" class="form-select">
-            <option value="">-- Select Type --</option>
-            <option value="Confidential">Confidential</option>
-            <option value="For Internal Use">For Internal Use</option>
-            <option value="General">General</option>
-          </select>
-          <span asp-validation-for="Classification" class="text-danger"></span>
-        </div>
-      </div>
-
-      <div class="mt-3 d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Generate PDF</button>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
 </div>
+
+@section Scripts {
+  <link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+
+  <style>
+    /* Keep editor inside the card and comfortable to type in */
+    .quill-wrap .ql-toolbar.ql-snow,
+    .quill-wrap .ql-container.ql-snow { border:1px solid #e5e7eb; }
+    .quill-wrap .ql-toolbar.ql-snow   { border-radius:10px 10px 0 0; }
+    .quill-wrap .ql-container.ql-snow {
+      border-top:0; border-radius:0 0 10px 10px;
+      min-height: 320px;           /* container height */
+    }
+    .quill-wrap .ql-editor { min-height: 300px; }  /* content height */
+    .quill-wrap .ql-editor.ql-blank::before { color:#9aa3ab; } /* placeholder tint */
+
+    /* Visual invalid state similar to Bootstrap */
+    .is-invalid.ql-container,
+    .quill-wrap .is-invalid { border-color:#dc3545 !important; }
+  </style>
+
+  <script>
+    // Init Quill
+    const quill = new Quill('#q-editor', {
+      theme: 'snow',
+      placeholder: 'Write the memo body here…',
+      modules: { toolbar: '#q-toolbar' }
+    });
+
+    // Hidden textarea (what MVC posts)
+    const bodyField = document.getElementById('Body');
+
+    // Load existing HTML (if any) into the editor
+    if (bodyField.value) quill.clipboard.dangerouslyPasteHTML(bodyField.value);
+
+    // Convert Quill alignment classes to inline styles so the PDF respects them
+    function normalizeQuillHtml(html) {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = html;
+
+      // turn .ql-align-* into inline text-align
+      wrap.querySelectorAll('.ql-align-center, .ql-align-right, .ql-align-justify').forEach(el => {
+        if (el.classList.contains('ql-align-center'))  el.style.textAlign = 'center';
+        if (el.classList.contains('ql-align-right'))   el.style.textAlign = 'right';
+        if (el.classList.contains('ql-align-justify')) el.style.textAlign = 'justify';
+        el.classList.remove('ql-align-center','ql-align-right','ql-align-justify');
+      });
+
+      // keep blank lines as <p><br></p> (Quill default) so PDF shows spacing
+      return wrap.innerHTML;
+    }
+
+    // Simple client-side gate (no model changes)
+    (function () {
+      const form   = document.getElementById('memoForm');
+      const qRoot  = document.getElementById('q-editor');
+
+      const msgSpan = name => document.querySelector('[data-valmsg-for="' + name + '"]');
+      const byName  = name => document.querySelector('[name="' + name + '"]');
+
+      function setErr(inputEl, spanEl, msg) {
+        if (inputEl) inputEl.classList.add('is-invalid');
+        if (spanEl) { spanEl.textContent = msg; spanEl.classList.add('d-block'); }
+      }
+      function clearErr(inputEl, spanEl) {
+        if (inputEl) inputEl.classList.remove('is-invalid');
+        if (spanEl) { spanEl.textContent = ''; spanEl.classList.remove('d-block'); }
+      }
+
+      form.addEventListener('submit', function (e) {
+        // push normalized HTML into the hidden field
+        bodyField.value = normalizeQuillHtml(quill.root.innerHTML);
+
+        let errors = 0;
+
+        const toEl   = byName('To');
+        const fromEl = byName('From');
+        const subEl  = byName('Subject');
+        const clsEl  = byName('Classification');
+        const bodyTxt = quill.getText().replace(/\s+/g, '').trim(); // true empty?
+
+        // clear previous
+        clearErr(toEl,   msgSpan('To'));
+        clearErr(fromEl, msgSpan('From'));
+        clearErr(subEl,  msgSpan('Subject'));
+        clearErr(clsEl,  msgSpan('Classification'));
+        qRoot.classList.remove('is-invalid'); clearErr(null, msgSpan('Body'));
+
+        // checks
+        if (!toEl.value.trim())   { setErr(toEl,   msgSpan('To'),           'Required'); errors++; }
+        if (!fromEl.value.trim()) { setErr(fromEl, msgSpan('From'),         'Required'); errors++; }
+        if (!subEl.value.trim())  { setErr(subEl,  msgSpan('Subject'),      'Required'); errors++; }
+        if (!clsEl.value.trim())  { setErr(clsEl,  msgSpan('Classification'),'Required'); errors++; }
+        if (!bodyTxt.length)      { qRoot.classList.add('is-invalid'); setErr(null, msgSpan('Body'), 'Body cannot be empty'); errors++; }
+
+        if (errors) {
+          e.preventDefault();
+          e.stopPropagation();
+          (form.querySelector('.is-invalid') || form).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    })();
+  </script>
+}

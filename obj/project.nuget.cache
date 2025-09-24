@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "upGg3OngGzw=",
+  "dgSpecHash": "exq+qjQoUyQ=",
   "success": true,
   "projectFilePath": "/Users/walidsalem/BADEA/MemoGenerator/MemoGenerator/MemoGenerator.csproj",
   "expectedPackageFiles": [
+    "/Users/walidsalem/.nuget/packages/htmlagilitypack/1.12.3/htmlagilitypack.1.12.3.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/questpdf/2025.7.1/questpdf.2025.7.1.nupkg.sha512"
   ],
   "logs": []

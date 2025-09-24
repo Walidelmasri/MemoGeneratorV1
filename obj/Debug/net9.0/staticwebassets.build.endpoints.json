@@ -1307,6 +1307,51 @@
       ]
     },
     {
+      "Route": "images/memo-banner.ktgo0tjqt5.png",
+      "AssetFile": "images/memo-banner.png",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "281842"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/png"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 24 Sep 2025 07:34:32 GMT"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "ktgo0tjqt5"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y="
+        },
+        {
+          "Name": "label",
+          "Value": "images/memo-banner.png"
+        }
+      ]
+    },
+    {
       "Route": "images/memo-banner.png",
       "AssetFile": "images/memo-banner.png",
       "Selectors": [],
@@ -1321,7 +1366,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "348946"
+          "Value": "281842"
         },
         {
           "Name": "Content-Type",
@@ -1329,62 +1374,17 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q=\""
+          "Value": "\"KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sun, 21 Sep 2025 09:16:12 GMT"
+          "Value": "Wed, 24 Sep 2025 07:34:32 GMT"
         }
       ],
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q="
-        }
-      ]
-    },
-    {
-      "Route": "images/memo-banner.zlpxror68w.png",
-      "AssetFile": "images/memo-banner.png",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "348946"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "image/png"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Sun, 21 Sep 2025 09:16:12 GMT"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "zlpxror68w"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q="
-        },
-        {
-          "Name": "label",
-          "Value": "images/memo-banner.png"
+          "Value": "sha256-KK+ndeIDH+gBMi201qD041B1gNy4WN20repFD9OZb/Y="
         }
       ]
     },
