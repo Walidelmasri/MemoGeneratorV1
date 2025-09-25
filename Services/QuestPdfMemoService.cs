@@ -75,14 +75,15 @@ namespace MemoGenerator.Services
             return html == "" || html == "<br>" || html == "<br/>" || html == "<br />";
         }
 
-        static void RenderInline(HtmlNode node, TextDescriptor t, TextStyle baseStyle, TextStyle arabicStyle)
+        // ===== FIXED: carry parallel styles for Latin + Arabic so <b>/<i>/<u> affect both =====
+        static void RenderInline(HtmlNode node, TextDescriptor t, TextStyle latinStyle, TextStyle arabicStyle)
         {
             if (node.NodeType == HtmlNodeType.Text)
             {
                 var text = HtmlEntity.DeEntitize(node.InnerText);
                 if (!string.IsNullOrWhiteSpace(text))
                 {
-                    var style = ContainsArabic(text) ? arabicStyle : baseStyle;
+                    var style = ContainsArabic(text) ? arabicStyle : latinStyle;
                     t.Span(text).Style(style);
                 }
                 return;
@@ -90,8 +91,29 @@ namespace MemoGenerator.Services
 
             var tag = node.Name.ToLowerInvariant();
 
+            // Effective styles in this tag scope (mutate both in parallel)
+            var effLatin  = latinStyle;
+            var effArabic = arabicStyle;
+            var underline = false;
+
+            if (tag is "strong" or "b")
+            {
+                effLatin  = effLatin.SemiBold();
+                effArabic = effArabic.SemiBold();
+            }
+
+            if (tag is "em" or "i")
+            {
+                effLatin  = effLatin.Italic();
+                effArabic = effArabic.Italic();
+            }
+
+            if (tag == "u")
+                underline = true;
+
             foreach (var child in node.ChildNodes)
             {
+                // <br> inside inline -> new line
                 if (child.NodeType == HtmlNodeType.Element &&
                     child.Name.Equals("br", StringComparison.OrdinalIgnoreCase))
                 {
@@ -99,30 +121,24 @@ namespace MemoGenerator.Services
                     continue;
                 }
 
-                var style = baseStyle;
-
-                if (tag is "strong" or "b")
-                    style = style.SemiBold();
-
-                if (tag is "em" or "i")
-                    style = style.Italic();
-
                 if (child.NodeType == HtmlNodeType.Text)
                 {
                     var txt = HtmlEntity.DeEntitize(child.InnerText);
                     if (!string.IsNullOrWhiteSpace(txt))
                     {
-                        var s = ContainsArabic(txt) ? arabicStyle : style;
+                        var s = ContainsArabic(txt) ? effArabic : effLatin;
                         var span = t.Span(txt).Style(s);
-                        if (tag == "u") span.Underline();
+                        if (underline) span.Underline();
                     }
                 }
                 else
                 {
-                    RenderInline(child, t, style, arabicStyle);
+                    // Pass the mutated pair down so nested Arabic also keeps bold/italic
+                    RenderInline(child, t, effLatin, effArabic);
                 }
             }
         }
+        // ===== END FIX =====
 
         // Tables
         static void RenderTable(IContainer parent, HtmlNode tableNode, float widthPt, TextStyle baseStyle, TextStyle arabicStyle)
@@ -513,11 +529,11 @@ namespace MemoGenerator.Services
                         f.Item().Text(t =>
                         {
                             t.AlignCenter();
-                            t.Span("(");
+                            // t.Span("(");
                             t.Span("Classification").SemiBold().FontColor(labelHexEn);
                             t.Span(": ");
                             t.Span(classText);
-                            t.Span(")");
+                            // t.Span(")");
                         });
                     });
                 });
