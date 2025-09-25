@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 using HtmlAgilityPack;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -24,7 +26,7 @@ namespace MemoGenerator.Controllers
         [HttpGet]
         public IActionResult Create() => View(new MemoCreateVm());
 
-        // --- minimal sanitizer using HtmlAgilityPack (keeps text-align only) ---
+        // --- minimal sanitizer using HtmlAgilityPack (keeps text-align + table basics) ---
         private static string SanitizeBody(string? html)
         {
             html ??= string.Empty;
@@ -34,11 +36,14 @@ namespace MemoGenerator.Controllers
             doc.LoadHtml($"<div id='root'>{html}</div>");
             var root = doc.GetElementbyId("root");
 
-            // Allowed
+            // Allowed tags (add table family so the PDF can render it)
             var allowedTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            { "p","br","strong","b","em","i","u","ul","ol","li","div","span" };
+            { "p","br","strong","b","em","i","u","ul","ol","li","div","span","table","thead","tbody","tr","th","td" };
+
             var allowedAlignValues = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             { "left","right","center","justify" };
+
+            static string DigitsOnly(string? s) => string.Concat((s ?? "").Where(char.IsDigit));
 
             void CleanNode(HtmlNode node)
             {
@@ -57,13 +62,16 @@ namespace MemoGenerator.Controllers
                             continue;
                         }
 
-                        // strip all attributes except style:text-align
+                        // capture possibly-allowed attrs, then strip all attrs, then re-apply safe ones
                         var style = child.GetAttributeValue("style", null);
+                        var colspanRaw = child.GetAttributeValue("colspan", null);
+                        var rowspanRaw = child.GetAttributeValue("rowspan", null);
+
                         child.Attributes.RemoveAll();
 
+                        // keep only text-align from style
                         if (!string.IsNullOrEmpty(style))
                         {
-                            // keep only text-align
                             string? alignValue = null;
                             var parts = style.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                             foreach (var p in parts)
@@ -78,6 +86,20 @@ namespace MemoGenerator.Controllers
                             }
                             if (!string.IsNullOrEmpty(alignValue))
                                 child.SetAttributeValue("style", $"text-align:{alignValue}");
+                        }
+
+                        // keep sanitized numeric colspan/rowspan on TH/TD only (for visual compatibility)
+                        if (child.Name.Equals("th", StringComparison.OrdinalIgnoreCase) ||
+                            child.Name.Equals("td", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var cs = DigitsOnly(colspanRaw);
+                            var rs = DigitsOnly(rowspanRaw);
+
+                            if (int.TryParse(cs, out var csi) && csi >= 2 && csi <= 50)
+                                child.SetAttributeValue("colspan", csi.ToString());
+
+                            if (int.TryParse(rs, out var rsi) && rsi >= 2 && rsi <= 200)
+                                child.SetAttributeValue("rowspan", rsi.ToString());
                         }
 
                         CleanNode(child); // recurse
@@ -100,7 +122,7 @@ namespace MemoGenerator.Controllers
             if (!ModelState.IsValid)
                 return View(vm);
 
-            // Sanitize posted HTML body
+            // Sanitize posted HTML body (now preserves tables)
             var safeBodyHtml = SanitizeBody(vm.Body);
 
             // Optional header/footer art
@@ -122,7 +144,7 @@ namespace MemoGenerator.Controllers
                 Through = string.IsNullOrWhiteSpace(vm.Through) ? null : vm.Through,
                 From = vm.From,
                 Subject = vm.Subject,
-                Body = safeBodyHtml,      // sanitized HTML
+                Body = safeBodyHtml,      // sanitized HTML (with tables)
                 Classification = vm.Classification,
                 BannerImage = banner,
                 FooterImage = footer
