@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Globalization;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using MemoGenerator.Models;
@@ -75,7 +76,7 @@ namespace MemoGenerator.Services
             return html == "" || html == "<br>" || html == "<br/>" || html == "<br />";
         }
 
-        // ===== FIXED: carry parallel styles for Latin + Arabic so <b>/<i>/<u> affect both =====
+        // ===== Inline renderer: keep Latin/Arabic styles in parallel so <b>/<i>/<u> affect both =====
         static void RenderInline(HtmlNode node, TextDescriptor t, TextStyle latinStyle, TextStyle arabicStyle)
         {
             if (node.NodeType == HtmlNodeType.Text)
@@ -91,7 +92,6 @@ namespace MemoGenerator.Services
 
             var tag = node.Name.ToLowerInvariant();
 
-            // Effective styles in this tag scope (mutate both in parallel)
             var effLatin  = latinStyle;
             var effArabic = arabicStyle;
             var underline = false;
@@ -113,7 +113,6 @@ namespace MemoGenerator.Services
 
             foreach (var child in node.ChildNodes)
             {
-                // <br> inside inline -> new line
                 if (child.NodeType == HtmlNodeType.Element &&
                     child.Name.Equals("br", StringComparison.OrdinalIgnoreCase))
                 {
@@ -133,12 +132,11 @@ namespace MemoGenerator.Services
                 }
                 else
                 {
-                    // Pass the mutated pair down so nested Arabic also keeps bold/italic
                     RenderInline(child, t, effLatin, effArabic);
                 }
             }
         }
-        // ===== END FIX =====
+        // ===== end inline renderer =====
 
         // Tables
         static void RenderTable(IContainer parent, HtmlNode tableNode, float widthPt, TextStyle baseStyle, TextStyle arabicStyle)
@@ -372,6 +370,39 @@ namespace MemoGenerator.Services
             });
         }
 
+        // --- helpers for dates ---
+        static string ToArabicIndicDigits(string s)
+        {
+            // 0..9 -> ٠١٢٣٤٥٦٧٨٩
+            ReadOnlySpan<char> map = "٠١٢٣٤٥٦٧٨٩";
+            var chars = s.ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+            {
+                char ch = chars[i];
+                if (ch >= '0' && ch <= '9')
+                    chars[i] = map[ch - '0'];
+            }
+            return new string(chars);
+        }
+
+        static string OrdinalDateEn(DateTime dt)
+        {
+            int d = dt.Day;
+            string suffix = (d % 10 == 1 && d != 11) ? "st"
+                          : (d % 10 == 2 && d != 12) ? "nd"
+                          : (d % 10 == 3 && d != 13) ? "rd" : "th";
+            return $"{dt:MMMM} {d}{suffix} {dt:yyyy}";
+        }
+
+        static string ArabicGregorianDate(DateTime dt)
+        {
+            // Arabic month/day with Arabic-Indic digits and an RTL embedding so order is correct.
+            var ci = new CultureInfo("ar-EG");
+            var s = dt.ToString("d MMMM yyyy", ci);      // e.g., "25 سبتمبر 2025"
+            s = ToArabicIndicDigits(s);                  // -> "٢٥ سبتمبر ٢٠٢٥"
+            return "\u202B" + s + "\u202C";              // RLE ... PDF
+        }
+
         public Task<byte[]> GenerateAsync(MemoDocument m)
         {
             QuestPDF.Settings.License = LicenseType.Community;
@@ -379,17 +410,8 @@ namespace MemoGenerator.Services
             static string HexOr(string? hex, string fallback)
                 => string.IsNullOrWhiteSpace(hex) ? fallback : hex!.Trim();
 
-            static string OrdinalDate(DateTime dt)
-            {
-                int d = dt.Day;
-                string suffix = (d % 10 == 1 && d != 11) ? "st"
-                              : (d % 10 == 2 && d != 12) ? "nd"
-                              : (d % 10 == 3 && d != 13) ? "rd" : "th";
-                return $"{dt:MMMM} {d}{suffix} {dt:yyyy}";
-            }
-
-            var labelHexEn   = "#1CA76A";
-            var labelHexAr   = "#137B3C";
+            var labelHexEn   = "#65b244";
+            var labelHexAr   = "#37813a";
             var underlineHex = HexOr(m.UnderlineColorHex, "#137B3C");
             var bodyHex      = "#000000";
 
@@ -402,14 +424,14 @@ namespace MemoGenerator.Services
 
             const float TopClusterSpacing = 2f;
             const float LabelBlockSpacing = 0f;
-            const float FieldLineHeight   = 1.28f;
+            const float FieldLineHeight   = 1.15f;  // tighter
             const float GapAfterSubjectPt = 20f;
 
-            var baseText   = TextStyle.Default.FontSize(11).FontFamily("Tajawal").FontColor(bodyHex);
+            var baseText   = TextStyle.Default.FontSize(12).FontFamily("Tajawal").FontColor(bodyHex);
             if (!string.IsNullOrWhiteSpace(m.FontFamilyLatin))
                 baseText = baseText.FontFamily(m.FontFamilyLatin);
 
-            var arabicText = TextStyle.Default.FontSize(11).FontFamily("Tajawal").FontColor(bodyHex);
+            var arabicText = TextStyle.Default.FontSize(12).FontFamily("Tajawal").FontColor(bodyHex);
             if (!string.IsNullOrWhiteSpace(m.FontFamilyArabic))
                 arabicText = arabicText.FontFamily(m.FontFamilyArabic);
 
@@ -418,7 +440,11 @@ namespace MemoGenerator.Services
 
             string classificationValue = (m.Classification ?? "").Trim();
             string memoNumber = string.IsNullOrWhiteSpace(m.MemoNumber) ? $"M-{DateTime.UtcNow:yyyyMMdd-HHmmss}" : m.MemoNumber!.Trim();
-            string dateText   = string.IsNullOrWhiteSpace(m.DateText)   ? OrdinalDate(DateTime.UtcNow)          : m.DateText!.Trim();
+
+            // Auto date: English if body has no Arabic, otherwise Arabic with Arabic-Indic digits
+            string autoDate = ContainsArabic(m.Body ?? "") ? ArabicGregorianDate(DateTime.UtcNow)
+                                                           : OrdinalDateEn(DateTime.UtcNow);
+            string dateText = string.IsNullOrWhiteSpace(m.DateText) ? autoDate : m.DateText!.Trim();
 
             var pdf = Document.Create(doc =>
             {
@@ -446,6 +472,7 @@ namespace MemoGenerator.Services
                     {
                         col.Spacing(TopClusterSpacing);
 
+                        // Memo No.
                         col.Item().AlignLeft().Width(MemoWidthPt).Column(c =>
                         {
                             c.Spacing(LabelBlockSpacing);
@@ -453,6 +480,7 @@ namespace MemoGenerator.Services
                             c.Item().Text(t => { t.AlignLeft(); t.Span(memoNumber).FontSize(10); });
                         });
 
+                        // Date
                         col.Item().AlignCenter().Width(DateWidthPt).Column(c =>
                         {
                             c.Spacing(LabelBlockSpacing);
@@ -463,26 +491,38 @@ namespace MemoGenerator.Services
                             });
                             c.Item()
                              .BorderBottom(LineThickness).BorderColor(underlineHex)
-                             .Text(t => { t.AlignCenter(); t.Span(dateText); });
+                             .Text(t =>
+                             {
+                                 t.AlignCenter();
+                                 var style = ContainsArabic(dateText) ? arabicText : baseText;
+                                 t.Span(dateText).Style(style);
+                             });
                         });
 
+                        // Field helpers
                         void FieldBlock(string en, string ar, string? value)
                         {
                             col.Item().AlignCenter().Width(FieldWidthPt).Column(b =>
                             {
                                 b.Spacing(LabelBlockSpacing);
+
+                                // Labels at 14pt
                                 b.Item().Row(r =>
                                 {
-                                    r.RelativeItem().Text(t => t.Span(en).SemiBold().FontColor(labelHexEn));
-                                    r.RelativeItem().AlignRight().Text(t => t.Span(ar).Style(arabicText).SemiBold().FontColor(labelHexAr));
+                                    r.RelativeItem().Text(t => t.Span(en).SemiBold().FontColor(labelHexEn).FontSize(14));
+                                    r.RelativeItem().AlignRight().Text(t => t.Span(ar).Style(arabicText).SemiBold().FontColor(labelHexAr).FontSize(14));
                                 });
-                                b.Item().BorderBottom(LineThickness).BorderColor(underlineHex)
-                                   .Text(t =>
-                                   {
-                                       t.DefaultTextStyle(ds => ds.LineHeight(FieldLineHeight));
-                                       t.AlignCenter();
-                                       t.Span(value ?? "");
-                                   });
+
+                                // Value: 14pt and script-aware
+                                b.Item()
+                                 .BorderBottom(LineThickness).BorderColor(underlineHex)
+                                 .Text(t =>
+                                 {
+                                     t.DefaultTextStyle(ds => ds.LineHeight(FieldLineHeight));
+                                     t.AlignCenter();
+                                     var s = ContainsArabic(value ?? "") ? arabicText : baseText;
+                                     t.Span(value ?? "").Style(s).FontSize(14);
+                                 });
                             });
                         }
 
@@ -491,27 +531,35 @@ namespace MemoGenerator.Services
                             col.Item().AlignCenter().Width(ThroughWidthPt).Column(b =>
                             {
                                 b.Spacing(LabelBlockSpacing);
+
+                                // Labels at 14pt
                                 b.Item().Row(r =>
                                 {
-                                    r.RelativeItem().Text(t => t.Span(en).SemiBold().FontColor(labelHexEn));
-                                    r.RelativeItem().AlignRight().Text(t => t.Span(ar).Style(arabicText).SemiBold().FontColor(labelHexAr));
+                                    r.RelativeItem().Text(t => t.Span(en).SemiBold().FontColor(labelHexEn).FontSize(14));
+                                    r.RelativeItem().AlignRight().Text(t => t.Span(ar).Style(arabicText).SemiBold().FontColor(labelHexAr).FontSize(14));
                                 });
+
+                                // Value: 14pt and script-aware (no underline)
                                 b.Item().Text(t =>
                                 {
                                     t.DefaultTextStyle(ds => ds.LineHeight(FieldLineHeight));
                                     t.AlignCenter();
-                                    t.Span(value ?? "");
+                                    var s = ContainsArabic(value ?? "") ? arabicText : baseText;
+                                    t.Span(value ?? "").Style(s).FontSize(14);
                                 });
                             });
                         }
 
+                        // Fields
                         FieldBlock("To",       "إلى",     m.To);
                         ThroughBlock("Through","بواسطة", m.Through);
                         FieldBlock("From",     "من",      m.From);
                         FieldBlock("Subject",  "الموضوع", m.Subject);
 
+                        // Gap before body
                         col.Item().Height(GapAfterSubjectPt);
 
+                        // Body
                         col.Item()
                            .AlignCenter()
                            .Width(FieldWidthPt)
@@ -521,19 +569,18 @@ namespace MemoGenerator.Services
                         });
                     });
 
+                    // Footer
                     page.Footer()
                         .PaddingTop(2)
                         .Column(f =>
                     {
-                        var classText = string.IsNullOrWhiteSpace(classificationValue) ? "—" : classificationValue;
+                        var classText = string.IsNullOrWhiteSpace(m.Classification) ? "—" : m.Classification!.Trim();
                         f.Item().Text(t =>
                         {
                             t.AlignCenter();
-                            // t.Span("(");
                             t.Span("Classification").SemiBold().FontColor(labelHexEn);
                             t.Span(": ");
                             t.Span(classText);
-                            // t.Span(")");
                         });
                     });
                 });
