@@ -58,6 +58,27 @@ namespace MemoGenerator.Services
             return alignAttr?.ToLowerInvariant();
         }
 
+        // ---- NEW: detect a blank paragraph/div (<p><br></p>, only &nbsp;, or whitespace) ----
+        static bool IsBlankBlock(HtmlNode block)
+        {
+            if (!(block.Name.Equals("p", StringComparison.OrdinalIgnoreCase) ||
+                  block.Name.Equals("div", StringComparison.OrdinalIgnoreCase)))
+                return false;
+
+            // Remove zero-width and NBSP then check inner text
+            var text = HtmlEntity.DeEntitize(block.InnerText)
+                                  .Replace("\u200B", "")  // zero-width space
+                                  .Replace("\u00A0", " ") // NBSP
+                                  .Trim();
+
+            if (text.Length > 0)
+                return false;
+
+            // Also consider inner HTML variants of a blank para
+            var html = block.InnerHtml.Trim().ToLowerInvariant();
+            return html == "" || html == "<br>" || html == "<br/>" || html == "<br />";
+        }
+
         // ---- Inline renderer: <b>, <strong>, <i>, <em>, <u>, and <br> ----
         static void RenderInline(HtmlNode node, TextDescriptor t, TextStyle baseStyle, TextStyle arabicStyle)
         {
@@ -76,7 +97,7 @@ namespace MemoGenerator.Services
 
             foreach (var child in node.ChildNodes)
             {
-                // <br> -> blank line
+                // <br> -> blank line in the same paragraph
                 if (child.NodeType == HtmlNodeType.Element &&
                     child.Name.Equals("br", StringComparison.OrdinalIgnoreCase))
                 {
@@ -111,15 +132,20 @@ namespace MemoGenerator.Services
 
         static void RenderParagraph(IContainer parent, HtmlNode block, float widthPt, TextStyle baseStyle, TextStyle arabicStyle)
         {
+            // --- NEW: treat completely blank <p>/<div> as vertical space between paragraphs ---
+            if (IsBlankBlock(block))
+            {
+                parent.Height(12);   // tweak spacing for one empty paragraph
+                return;
+            }
+
             var align = ReadTextAlign(block);
             var rtl = IsRtlNode(block);
 
-            // Default alignment if not set
             var alignToUse = string.IsNullOrWhiteSpace(align)
                 ? (rtl ? "right" : "left")
                 : align;
 
-            // Width + (conditionally) RTL content flow
             var container = parent.AlignCenter().Width(widthPt);
             if (rtl) container = container.ContentFromRightToLeft();
 
@@ -127,21 +153,20 @@ namespace MemoGenerator.Services
             {
                 t.DefaultTextStyle(ds => ds.LineHeight(1.35f));
 
-                // Direction-aware alignment (no chaining after Align*!)
                 switch (alignToUse)
                 {
                     case "justify":
-                        t.Justify();       // requires a QuestPDF version that supports justification
+                        t.Justify();       // if your QuestPDF version doesn’t support this, it’s ignored
                         break;
                     case "center":
                         t.AlignCenter();
                         break;
                     case "right":
-                        t.AlignEnd();
+                        t.AlignRight();
                         break;
                     case "left":
                     default:
-                        t.AlignStart();
+                        t.AlignLeft();
                         break;
                 }
 
@@ -172,8 +197,8 @@ namespace MemoGenerator.Services
                         switch (align)
                         {
                             case "center": b.AlignCenter(); break;
-                            case "right":  b.AlignEnd();    break;
-                            default:       b.AlignStart();  break;
+                            case "right":  b.AlignRight();  break;
+                            default:       b.AlignLeft();   break;
                         }
                         b.Span(bullet);
                     });
@@ -183,10 +208,10 @@ namespace MemoGenerator.Services
                         t.DefaultTextStyle(ds => ds.LineHeight(1.35f));
                         switch (align)
                         {
-                            case "justify": t.Justify();    break;
+                            case "justify": t.Justify();     break;
                             case "center":  t.AlignCenter(); break;
-                            case "right":   t.AlignEnd();    break;
-                            default:        t.AlignStart();  break;
+                            case "right":   t.AlignRight();  break;
+                            default:        t.AlignLeft();   break;
                         }
                         foreach (var child in li.ChildNodes)
                             RenderInline(child, t, baseStyle, arabicStyle);
@@ -217,12 +242,12 @@ namespace MemoGenerator.Services
                         var rtl = ContainsArabic(line);
                         if (rtl)
                         {
-                            t.AlignEnd();
+                            t.AlignRight();
                             t.Span(line).Style(arabicStyle);
                         }
                         else
                         {
-                            t.AlignStart();
+                            t.AlignLeft();
                             t.Span(line).Style(baseStyle);
                         }
                     }
@@ -254,7 +279,7 @@ namespace MemoGenerator.Services
                             break;
 
                         case "br":
-                            col.Item().Height(8); // explicit blank line
+                            col.Item().Height(12); // explicit extra blank line between blocks
                             break;
 
                         case "ul":
