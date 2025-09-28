@@ -433,9 +433,9 @@ namespace MemoGenerator.Services
             static string HexOr(string? hex, string fallback)
                 => string.IsNullOrWhiteSpace(hex) ? fallback : hex!.Trim();
 
-            var labelHexEn = "#65b244";
-            var labelHexAr = "#37813a";
-            var underlineHex = HexOr(m.UnderlineColorHex, "#137B3C");
+            var labelHexEn = "#78D64B";
+            var labelHexAr = "#3A913F";
+            var underlineHex = HexOr(m.UnderlineColorHex, "#212322");
             var bodyHex = "#000000";
 
             const float FieldWidthPt = 420f;
