@@ -92,19 +92,19 @@ namespace MemoGenerator.Services
 
             var tag = node.Name.ToLowerInvariant();
 
-            var effLatin  = latinStyle;
+            var effLatin = latinStyle;
             var effArabic = arabicStyle;
             var underline = false;
 
             if (tag is "strong" or "b")
             {
-                effLatin  = effLatin.SemiBold();
+                effLatin = effLatin.SemiBold();
                 effArabic = effArabic.SemiBold();
             }
 
             if (tag is "em" or "i")
             {
-                effLatin  = effLatin.Italic();
+                effLatin = effLatin.Italic();
                 effArabic = effArabic.Italic();
             }
 
@@ -246,10 +246,10 @@ namespace MemoGenerator.Services
 
                 switch (alignToUse)
                 {
-                    case "justify": t.Justify();    break;
-                    case "center":  t.AlignCenter(); break;
-                    case "right":   t.AlignRight();  break;
-                    default:        t.AlignLeft();   break;
+                    case "justify": t.Justify(); break;
+                    case "center": t.AlignCenter(); break;
+                    case "right": t.AlignRight(); break;
+                    default: t.AlignLeft(); break;
                 }
 
                 foreach (var child in block.ChildNodes)
@@ -260,49 +260,72 @@ namespace MemoGenerator.Services
         static void RenderList(IContainer parent, HtmlNode list, bool ordered, float widthPt, TextStyle baseStyle, TextStyle arabicStyle)
         {
             var items = list.SelectNodes("./li");
-            if (items == null) return;
+            if (items == null || items.Count == 0)
+                return;
 
             int index = 1;
-            foreach (var li in items)
+
+            // IMPORTANT: create a column and add a NEW item container for each <li>
+            parent.Column(col =>
             {
-                var bullet = ordered ? $"{index}. " : "• ";
-                var rtl = IsRtlNode(li);
-                var align = ReadTextAlign(li) ?? (rtl ? "right" : "left");
-
-                var rowContainer = parent.AlignCenter().Width(widthPt);
-                if (rtl) rowContainer = rowContainer.ContentFromRightToLeft();
-
-                rowContainer.Row(row =>
+                foreach (var li in items)
                 {
-                    row.ConstantItem(18).Text(b =>
+                    // --- guard: skip truly blank list items Quill often leaves (e.g., <li><br></li>) ---
+                    var liText = HtmlEntity.DeEntitize(li.InnerText ?? string.Empty)
+                                    .Replace("\u200B", "")   // zero-width space
+                                    .Replace("\u00A0", " ")  // NBSP
+                                    .Trim();
+                    bool hasNonTextContent = li.SelectSingleNode(".//img|.//table|.//ul|.//ol") != null;
+                    if (liText.Length == 0 && !hasNonTextContent)
+                        continue;
+                    // -------------------------------------------------------------------------------------
+
+                    var bullet = ordered ? $"{index}. " : "• ";
+                    var rtl = IsRtlNode(li);
+                    var align = ReadTextAlign(li) ?? (rtl ? "right" : "left");
+
+                    // Create a fresh single-use container per list item
+                    col.Item().Element(itemContainer =>
                     {
-                        switch (align)
+                        var rowContainer = itemContainer.AlignCenter().Width(widthPt);
+                        if (rtl)
+                            rowContainer = rowContainer.ContentFromRightToLeft();
+
+                        rowContainer.Row(row =>
                         {
-                            case "center": b.AlignCenter(); break;
-                            case "right":  b.AlignRight();  break;
-                            default:       b.AlignLeft();   break;
-                        }
-                        b.Span(bullet);
+                            row.ConstantItem(18).Text(b =>
+                            {
+                                switch (align)
+                                {
+                                    case "center": b.AlignCenter(); break;
+                                    case "right": b.AlignRight(); break;
+                                    default: b.AlignLeft(); break;
+                                }
+                                b.Span(bullet);
+                            });
+
+                            row.RelativeItem().Text(t =>
+                            {
+                                t.DefaultTextStyle(ds => ds.LineHeight(1.35f));
+                                switch (align)
+                                {
+                                    case "justify": t.Justify(); break;
+                                    case "center": t.AlignCenter(); break;
+                                    case "right": t.AlignRight(); break;
+                                    default: t.AlignLeft(); break;
+                                }
+
+                                foreach (var child in li.ChildNodes)
+                                    RenderInline(child, t, baseStyle, arabicStyle);
+                            });
+                        });
                     });
 
-                    row.RelativeItem().Text(t =>
-                    {
-                        t.DefaultTextStyle(ds => ds.LineHeight(1.35f));
-                        switch (align)
-                        {
-                            case "justify": t.Justify();    break;
-                            case "center":  t.AlignCenter(); break;
-                            case "right":   t.AlignRight();  break;
-                            default:        t.AlignLeft();   break;
-                        }
-                        foreach (var child in li.ChildNodes)
-                            RenderInline(child, t, baseStyle, arabicStyle);
-                    });
-                });
-
-                index++;
-            }
+                    index++;
+                }
+            });
         }
+
 
         static void RenderRichBody(IContainer container, string html, float widthPt, TextStyle baseStyle, TextStyle arabicStyle)
         {
@@ -318,7 +341,7 @@ namespace MemoGenerator.Services
 
                         var rtl = ContainsArabic(line);
                         if (rtl) { t.AlignRight(); t.Span(line).Style(arabicStyle); }
-                        else     { t.AlignLeft();  t.Span(line).Style(baseStyle);  }
+                        else { t.AlignLeft(); t.Span(line).Style(baseStyle); }
                     }
                 });
                 return;
@@ -410,24 +433,24 @@ namespace MemoGenerator.Services
             static string HexOr(string? hex, string fallback)
                 => string.IsNullOrWhiteSpace(hex) ? fallback : hex!.Trim();
 
-            var labelHexEn   = "#65b244";
-            var labelHexAr   = "#37813a";
+            var labelHexEn = "#65b244";
+            var labelHexAr = "#37813a";
             var underlineHex = HexOr(m.UnderlineColorHex, "#137B3C");
-            var bodyHex      = "#000000";
+            var bodyHex = "#000000";
 
-            const float FieldWidthPt      = 420f;
-            const float ThroughWidthPt    = FieldWidthPt - 40f;
-            const float MemoWidthPt       = 220f;
-            const float DateWidthPt       = 260f;
-            const float LineThickness     = 0.8f;
-            const float FooterReservePt   = 84f;
+            const float FieldWidthPt = 420f;
+            const float ThroughWidthPt = FieldWidthPt - 40f;
+            const float MemoWidthPt = 220f;
+            const float DateWidthPt = 260f;
+            const float LineThickness = 0.8f;
+            const float FooterReservePt = 84f;
 
             const float TopClusterSpacing = 2f;
             const float LabelBlockSpacing = 0f;
-            const float FieldLineHeight   = 1.15f;  // tighter
+            const float FieldLineHeight = 1.15f;  // tighter
             const float GapAfterSubjectPt = 20f;
 
-            var baseText   = TextStyle.Default.FontSize(12).FontFamily("Tajawal").FontColor(bodyHex);
+            var baseText = TextStyle.Default.FontSize(12).FontFamily("Tajawal").FontColor(bodyHex);
             if (!string.IsNullOrWhiteSpace(m.FontFamilyLatin))
                 baseText = baseText.FontFamily(m.FontFamilyLatin);
 
@@ -551,10 +574,10 @@ namespace MemoGenerator.Services
                         }
 
                         // Fields
-                        FieldBlock("To",       "إلى",     m.To);
-                        ThroughBlock("Through","بواسطة", m.Through);
-                        FieldBlock("From",     "من",      m.From);
-                        FieldBlock("Subject",  "الموضوع", m.Subject);
+                        FieldBlock("To", "إلى", m.To);
+                        ThroughBlock("Through", "بواسطة", m.Through);
+                        FieldBlock("From", "من", m.From);
+                        FieldBlock("Subject", "الموضوع", m.Subject);
 
                         // Gap before body
                         col.Item().Height(GapAfterSubjectPt);
